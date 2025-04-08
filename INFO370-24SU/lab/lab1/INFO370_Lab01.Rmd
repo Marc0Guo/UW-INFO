@@ -1,0 +1,116 @@
+---
+title: "Lab01 - Explore and clean Data"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+## Question 1: Load, pre-process
+### 1.1 Load Data, Check Rows and Columns
+```{r message = FALSE, warning=FALSE}
+df <- read_delim("../data/airbnb-vancouver-bc-listings.csv.bz2")
+dim(df)
+```
+There are 4448 rows and 74 columns in the dataset
+
+## 1.2 variable names
+```{r}
+df %>% 
+  names()
+```
+### 1.3 Select columns 
+```{r}
+df <- df %>% 
+  select(name, description, room_type, price)
+
+sample_n(df, 5)
+```
+Select columns `name`, `description`, `room_type`, and `price` from dataset for analysis.
+
+# Question 2: Room type variable
+## 2.1 Check missing value for `room_type` 
+```{r}
+df %>% 
+  pull(room_type) %>% 
+  is.na() %>% 
+  sum()
+```
+There's no missing data for `room_type` variable
+
+## 2.2 Check the data type of `room_type` column
+```{r}
+print(typeof(df$room_type))
+```
+I expect the variable type of `room type` variable should be character. What I got from code is also indicating the variable type of this column is character.
+
+### 2.3
+```{r}
+table(df$room_type)
+```
+I examined the frequency of value in room type column. It appears that all values are reasonable.
+
+### 2.4
+In conclusion, this variable should be reliable for me to use in analysis. Since it doesn't have null values.
+
+## Problem 3: Price
+### 3.1 Check missing price variable
+```{r}
+df %>% 
+  pull(price) %>% 
+  is.na() %>% 
+  sum()
+```
+It appears to be no missing price variables
+
+### 3.2 Data type of price variable
+```{r}
+print(typeof(df$price))
+```
+I would expect the data type of price to be numeric. What it actually is was character.
+
+### 3.3
+```{r}
+df %>% 
+  sample_n(10) %>% 
+  pull(price)
+```
+The data type of price variable is character because every value starts with a dollar sign `$`.
+
+### 3.4
+```{r}
+df <- df %>% 
+  mutate(Price = as.numeric(gsub("[\\$,]", "", df$price)))
+
+df %>% 
+  sample_n(5) %>% 
+  select(Price, price)
+```
+
+### 3.5 Check for missing value after convertion
+```{r}
+df %>% 
+  filter(is.na(Price) | is.na(price))
+```
+I got no missing value for `price` in character and `Price` in numeric
+
+### 3.6 Check Smallest and Largest Price
+```{r}
+df %>% 
+  pull(Price) %>% 
+  range()
+```
+The range of price starts from 13 to 9999. The smallest price doesn't make sense.
+
+### 3.7 Analyze the price
+If the unit is in dollar, the smallest value of price doesn't make sense since rent an airbnb won't be that cheap. The highest value of 9999 seems reasonable since landlords tends to use a price like 9999 to indicate the house is being rented while still want to demonstrate their house.
+
+### 3.8 Histogram of price
+```{r}
+ggplot(df, aes(x=Price)) +
+  geom_histogram(color="cyan", fill="pink") +
+  scale_x_log10() 
+```
+The graph is heavily skewed to the right with a lot of outliers on higher price. Most of the house price occur between 0 to 750 dollars.

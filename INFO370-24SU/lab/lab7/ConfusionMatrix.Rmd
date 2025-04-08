@@ -1,0 +1,24 @@
+---
+title: "lab07-ConfusionMatrix"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## 1
+### 1.1
+Set positive to be `poisonous` and negative for `edible`
+```{r}
+TP <- 3   2   4    2
+TN <- 4   7   3    5
+FP <- 3   0   2    0
+FN <- 0   1   1    3
+```
+
+```{r}
+TP <- 3    5
+TN <- 4    2
+FP <- 1    3
+FN <- 2    0
+```
+

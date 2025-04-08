@@ -1,0 +1,192 @@
+---
+title: "grouped"
+output: html_document
+date: "2023-11-07"
+---
+
+```{r}
+library(tidyverse)
+titanic <- read_delim("../Data/titanic.csv")
+dim(titanic)
+```
+
+```{r}
+titanic %>% 
+  summarize(fare = mean(fare, na.rm=TRUE))
+```
+
+```{r}
+titanic %>% 
+  filter(sex == "female") %>% 
+  summarize(fare = mean(fare, na.rm=TRUE))
+```
+
+```{r}
+titanic %>% 
+  summarize(n_distinct(cabin))
+```
+
+#### put men and women is different group (seperate data set)
+```{r}
+titanic %>%
+  group_by(sex) %>%
+  summarize(fare = mean(fare, na.rm=TRUE))
+```
+
+```{r}
+titanic %>%
+  group_by(cabin) %>%
+  summarize(fare = mean(fare, na.rm=TRUE))
+```
+
+#### How much for the most expensive cabin and how many people
+```{r}
+titanic %>%
+  group_by(cabin) %>%
+  summarize(fare = mean(fare, na.rm=TRUE), n()) %>% 
+  arrange(desc(fare))
+```
+
+#### What is the biggest cabin
+```{r}
+titanic %>%
+  group_by(cabin) %>%
+  summarize(fare = mean(fare, na.rm=TRUE), n = n()) %>% 
+  arrange(desc(n))
+```
+
+
+#### Load as fild
+```{r}
+library(tidyverse)
+bn <- read_delim("../Data/babynames.csv.bz2")
+dim(bn)
+```
+
+
+#### load packages
+```{r}
+library(babynames)
+dim(babynames)
+head(babynames)
+```
+
+How many different names b/w 2000 and 2005?
+```{r}
+babynames %>% 
+  filter(between(year, 2000, 2005)) %>% 
+  summarize(n = n_distinct(name))
+```
+
+How many different names for each of these years
+```{r}
+babynames %>% 
+  group_by(year) %>% 
+  filter(between(year, 2000, 2005)) %>% 
+  summarize(n = n_distinct(name))
+```
+
+How many boys and girls name each year
+```{r}
+babynames %>%
+  group_by(year, sex) %>%
+  filter(between(year, 2000, 2005)) %>%
+  summarize(n = n_distinct(name))
+```
+
+What is the most popular name
+```{r}
+babynames %>%
+  filter(between(year, 2000, 2005)) %>%
+  arrange(desc(n)) %>% 
+  head(3)
+```
+
+Which one is the smallest in a 
+```{r}
+x <- c(12, 11, 13)
+rank(x)
+```
+
+```{r}
+x[rank(x) == 1]
+```
+Order in different arrangement
+```{r}
+babynames %>%
+  filter(between(year, 2000, 2005)) %>%
+  filter(rank(desc(n)) <= 3)
+```
+Exercise:
+
+What are the 3 most popular girls/boy is this period
+
+```{r}
+babynames %>%
+  group_by(sex) %>% 
+  filter(between(year, 2000, 2005)) %>%
+  filter(rank(desc(n)) <= 3)
+```
+
+```{r}
+babynames %>%
+  group_by(sex) %>%
+  filter(between(year, 2000, 2005)) %>%
+  filter(rank(desc(n)) <= 3) %>%
+  arrange(sex, desc(n))
+```
+Exercise:
+
+What are the most popular girl/boy names for each year in this period
+```{r}
+babynames %>%
+  group_by(sex, year) %>%
+  filter(between(year, 2000, 2005)) %>%
+  filter(rank(desc(n)) <= 1) %>%
+  arrange(sex, year)
+```
+
+How many times the gender were given in these data?
+```{r}
+babynames %>%
+  filter(between(year, 2000, 2005)) %>% 
+  group_by(sex) %>% 
+  summarize(N = sum(n))
+```
+
+How many times the gender were given in these data?
+```{r}
+babynames %>%
+  filter(between(year, 2000, 2005)) %>% 
+  group_by(name) %>% 
+  summarize(N = sum(n)) %>% 
+  arrange(desc(N)) %>% 
+  head(6)
+```
+
+Find 3 most populat names 2000-2005 for boys and girls
+```{r}
+babynames %>%
+  filter(between(year, 2000, 2005)) %>%
+  group_by(name, sex) %>%
+  summarize(N = sum(n)) %>%
+  group_by(sex) %>%
+  filter(rank(desc(N)) <= 3) %>%
+  arrange(sex, desc(N)) %>% 
+  ungroup()
+```
+
+How popular was name "Mei" for girls in 2004?
+```{r}
+babynames %>% 
+  filter(year == 2004,
+         sex == "F") %>% 
+  mutate(r = rank(desc(n))) %>% 
+  filter(name %in% c("Mei", "Madison"))
+```
+
+```{r}
+n <- c(400, 800, 200, 350)
+rank(n)
+```
+

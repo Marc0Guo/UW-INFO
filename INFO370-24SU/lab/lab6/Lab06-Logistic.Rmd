@@ -1,0 +1,59 @@
+---
+title: "Lab06-Logistic"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(margins)
+```
+
+## 1
+### 1.1
+```{r}
+tt <- read_delim("../../data/titanic.csv.bz2")
+dim(tt)
+summary(tt)
+```
+
+### 1.2
+pclass
+
+### 1.3
+```{r}
+tt <- tt %>% 
+  mutate(child = age < 14)
+```
+
+### 1.4
+```{r}
+m <- glm(survived ~ factor(pclass) + sex + child, data = tt)
+summary(margins(m))
+```
+The refernce category is women in first class.
+The result indicates that with other factor unchanged male on average has probability 50 percent point less likely to survive than women. Child has probability of 20.67 percent point more chance to survive than women adult. People from second class is 17.53 percent point less likely to survive than prople from first class. People from third class is 31.71 percent point less likely to survive than prople from first class.
+
+### 1.6
+Women and children from first and second class get on the boats. Women and children from 3rd class might wait for these people to get on boats first. Men might need to wait all of these people to get on the boats. The survivors description is accurate. The order might breakdown a bit but the overall order remain.
+
+### 2.1
+```{r}
+tt <- tt %>% 
+  mutate(ym = (age >=18 & age <= 30) & (sex == "male") )
+tt
+```
+### 2.2
+```{r}
+m <- glm(survived ~ factor(pclass) + sex + child + ym, data = tt)
+summary(margins(m))
+```
+Young man indeed has more chance to survive. Based on the result, young man on average has 4.19 percent point more like to survive than non-young man with other factor remain unchanged. However, the P value is really large (larger than 0.05) so we don't have any evidence to indicate young man break the rule and get on the boat.
+
+```{r}
+tt %>% 
+  ggplot(aes(age, fill = factor(survived))) +
+  geom_histogram(pos = "fill") +
+  facet_wrap(~ sex)
+```
+

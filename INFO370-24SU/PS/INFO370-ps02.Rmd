@@ -1,0 +1,411 @@
+---
+title: "INFO370-ps02"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+## 1 Binomial distribution
+### 1.1 Theory
+#### 1.1.1 Compute EX
+```{r}
+Ex <- 0.6 + 0.6 + 0.6
+Ex
+```
+The expected value of this RV is 1.8
+
+#### 1.1.2 Compute the probability
+```{r}
+P_0s <- 0.6^0*0.4^3 * 1
+P_0s
+P_1s <- 0.6^1*0.4^2 * 3
+P_1s
+P_2s <- 0.6^2*0.4^1 * 3
+P_2s
+P_3s <- 0.6^3*0.4^0 * 1
+P_3s
+```
+The probability of getting 0 success is 0.064, getting 1 success is 0.288, getting 2 success is 0.432, getting 3 success is 0.216
+
+#### 1.1.3 Compute variance 
+```{r}
+Varx <- ((0^2 * 0.4 + 1^2 * 0.6) - 0.6^2)*3
+Varx
+```
+The variance of this RV is 0.72
+
+### 1.2 Simulations
+#### 1.2.1 Create a sample of size R
+```{r}
+set.seed(370)
+n <- 3
+p <- 0.6
+R <- 100000
+sample <- rbinom(R, n, p)
+```
+
+#### 1.2.2 Compute the mean 
+```{r}
+mean(sample)
+```
+The sample mean is 1.79868 which is close to expected value of RV
+
+#### 1.2.3 Compute sample variance
+```{r}
+var(sample)
+```
+The variance of sample is 0.7166374 which is close to theoretical variance
+
+#### 1.2.4 How many times you expect to see 0, 1, 2, and 3 successes?
+```{r}
+expected_count <- c(R * P_0s, R * P_1s, R * P_2s, R * P_3s)
+expected_count
+```
+I would expect to see 6400 times 0 success, 28800 times 1 success, 43200 times 2 success, 21600 times 3 success.
+
+#### 1.2.5 Make a histogram of your sample.
+```{r}
+hist(sample, breaks = 30, col = "cyan")
+
+points(0:3, expected_count, col = "Red")
+```
+The histogram does match the expected numbers we want.
+
+## 2 Explore Central Limit Theorem
+### 2.1 What is Random Variable (RV)? What makes X a RV?
+Random Variable is a process of assigning a number to each event in the sample space. X was similar to fllip a fair coin which assigned a probability of 0.5 of getting -1 (tails) and a probability of 0.5 getting 1(head)
+
+### 2.2 Calculate the expected value and variance of this random variable.
+```{r}
+Ex <- 0.5 * -1 + 0.5 * 1
+Ex
+Varx <- ((-1)^2 * 0.5 + 1^2 * 0.5) - 0^2
+Varx
+```
+
+The expected value is 0 and the variance is 1. Expected value is a theoretical mean of random variable over infinite number of trails, the value won't change. Sample mean is the mean of a given set of sample, it can vary based on sample.
+
+### 2.3 Choose your number of repetitions R. 
+```{r}
+R <- 100000
+```
+I chose 100000
+
+### 2.4 Create a vector of R random realizations of X. Make a histogram of those.
+```{r}
+set.seed(370)
+X <- 2 * rbinom(R, 1, 0.5) - 1
+
+hist(X, breaks=100, main="Histogram of Random Realizations of X", xlab="Value", ylab="Frequency", col = "pink")
+```
+
+### 2.5 Compute and report mean and variance of the sample
+```{r}
+mean(X)
+var(X)
+```
+The sample mean is pretty close to theoretical mean that is 0. The sample variance is also pretty close to theoretical variance of 1
+
+### 2.6 Create R pairs of random realizations of X
+```{r}
+set.seed(370)
+pairs <- matrix(2 * rbinom(2 * R, 1, 0.5) - 1, ncol = 2)
+pair_means <- rowMeans(pairs)
+hist(pair_means, breaks = 100, main = "Histogram of Pair Means", xlab = "Mean Value", col = "pink")
+```
+There are around 50000 values that is 0, 25000 values -0.1 and 1.0
+
+### 2.7 Compute and report mean of the R pair means, and variance of the means.
+```{r}
+mean(pair_means)
+var(pair_means)
+```
+The mean is -4e-05 and the variance is 0.499905
+
+### 2.8 Compute the expected value and variance of the pair mean
+```{r}
+Ex <- 0.5 * -1 + 0.5 * 1
+Ex
+Varx <- (((-1)^2 * 0.5 + 1^2 * 0.5) - 0^2)/2
+Varx
+```
+The expected value is 0 and the expected variance is 0.5 My calculation was pretty close to the theoretical values.
+
+### 2.9 repeat this with 5-tuples
+```{r}
+set.seed(370)
+t5 <- matrix(2 * rbinom(5 * R, 1, 0.5) - 1, ncol = 5)
+t5_mean <- rowMeans(t5)
+
+hist(t5_mean, breaks = 100, main = "Histogram of 5-tuple Means", xlab = "Mean Value", col = "pink")
+
+mean(t5_mean)
+var(t5_mean)
+
+Ex <- 0.5 * -1 + 0.5 * 1
+Ex
+Varx <- (((-1)^2 * 0.5 + 1^2 * 0.5) - 0^2)/5
+Varx
+```
+The theoretical mean is 0 and the theoretical variance is 0.2. It's closer to sample mean of 0.000324 and sample variance of 0.2005939. There are more columns in this histogram compares to the previous one. 
+
+### 2.10 Repeat with 25-tuples
+```{r}
+set.seed(370)
+t5 <- matrix(2 * rbinom(25 * R, 1, 0.5) - 1, ncol = 25)
+t5_mean <- rowMeans(t5)
+
+hist(t5_mean, breaks = 100, main = "Histogram of 25-tuple Means", xlab = "Mean Value", col = "pink")
+
+mean(t5_mean)
+var(t5_mean)
+
+Ex <- 0.5 * -1 + 0.5 * 1
+Ex
+Varx <- (((-1)^2 * 0.5 + 1^2 * 0.5) - 0^2)/25
+Varx
+```
+The theoretical mean is 0 and the theoretical variance is 0.04. It's closer to sample mean of 9.92e-05 and sample variance of 0.03999706. This histogram also contains more columns compares to the previous one.
+
+### 2.11 Repeat with with 1000-tuples
+```{r}
+set.seed(370)
+t5 <- matrix(2 * rbinom(1000 * R, 1, 0.5) - 1, ncol = 1000)
+t5_mean <- rowMeans(t5)
+
+hist(t5_mean, breaks = 100, main = "Histogram of 25-tuple Means", xlab = "Mean Value", col = "pink")
+
+mean(t5_mean)
+var(t5_mean)
+
+Ex <- 0.5 * -1 + 0.5 * 1
+Ex
+Varx <- (((-1)^2 * 0.5 + 1^2 * 0.5) - 0^2)/1000
+Varx
+```
+The theoretical mean is 0 and the theoretical variance is 0.001. It's closer to sample mean of -0.0001465 and sample variance of 0.00100602
+
+### 2.12 Comment on the tuple size
+As tuple size increases, the shape of histogram become more bell shape and the distribution become more normal 
+
+### 2.13 Explain why do the histograms resemble normal distribution as S grows.
+As sample size increases, the sample mean tends to be normal distributed due to CLT since there will be more possibility of getting new means.
+For S = 1, the distribution is bimodal due to there's only two possibility of distribution, -1 and 1
+For S = 2, the mean of pairs create more combinations of means (-1, 0, 1) therefore distribution become more normal
+
+### 2.14 Explain what is the difference between R and S.
+R is the number of repetitions of sample, increasing R would result in more precise estimation of sample mean and variance
+S is the sample size, increasing S would make sample mean more normal
+
+### 3.1 Statistical hypothesis
+#### 3.1.1 Load data
+```{r}
+airbnb <- read_delim("../data/beijing-seattle-airbnb-price.csv.bz2")
+dim(airbnb)
+
+```
+There are 995 rows and 2 columns. 
+
+#### 3.1.2 Basic check
+```{r}
+summary(airbnb)
+unique(airbnb$city)
+sum(is.na(airbnb$city))
+sum(is.na(airbnb$price))
+table(airbnb$city)
+```
+There's no missing data for both columns. The city column only contains Seattle and Beijing. The upper range of price is reasonable. The lower range of price is 30$ which is relatively cheap but still in reasonable range. There are 729 observations for Beijing and 266 observations for Seattle.
+
+##### 3.1.3.a Perform a basic descriptive analysis
+```{r}
+airbnb %>% 
+  group_by(city) %>%
+  summarise(
+    mean = mean(price, na.rm = TRUE),
+    median = median(price, na.rm = TRUE),
+    min = min(price, na.rm = TRUE),
+    max = max(price, na.rm = TRUE)
+  )
+```
+
+##### 3.1.3.b Show the distribution of price in both cities.
+```{r}
+ggplot(airbnb, aes(x = price, fill = city)) + 
+  geom_density(alpha = 0.5) + 
+  labs(title = "Density Plot of Airbnb Prices in Beijing and Seattle",
+       x = "Price",
+       y = "Density",
+       fill = "City") + 
+  scale_x_log10()
+```
+##### 3.1.3.c Which city has more expensive AirBnBs
+Based on the analysis, Beijing has more expensive Airbnbs based on its mean and median.
+
+##### 3.1.3.d Is the price data roughly normal
+The price distribution of Beijing is roughly normal, the price distribution of Seattle is bimodal and right skewed.
+
+### 3.2 Test by brute-force
+#### 3.2.1 Compute the mean μS and std.dev σS of price in Seattle.
+```{r}
+Seattle <- airbnb %>% 
+  filter(city == "Seattle")
+mean(Seattle$price)
+sd(Seattle$price)
+```
+The mean of Seattle price is 210.6466 and the standard deviation of Seattle price is 244.3358
+
+#### 3.2.2 Create a set of random normal
+```{r}
+set.seed(370)
+simulatedSeattle <- rnorm(266, 210.6466, 244.3358)
+```
+
+#### 3.2.3 Compute the average of your simulated Seattle prices
+```{r}
+mean(simulatedSeattle)
+```
+Since the simulation prices are generated using original data mean and sd. The mean of simulated price should be close to original data mean.
+
+#### 3.2.4 Repeat simulations 10000 times 
+```{r}
+R <- 10000
+
+simulated_averages <- numeric(R)
+
+set.seed(370)
+for (i in 1:R) {
+  simulated_prices <- rnorm(266, 210.6466, 244.3358)
+  simulated_averages[i] <- mean(simulated_prices)
+}
+```
+
+#### 3.2.5 Show range, mean, sd and histogram
+```{r}
+range(simulated_averages)
+mean(simulated_averages)
+sd(simulated_averages)
+hist(simulated_averages, breaks = 30, main = "Histogram of Simulated Averages", xlab = "Simulated Average Price", col = "pink")
+```
+#### 3.2.6 Describe what did you get.
+I got a histogram with rougely normal distribution. I do get a value that is at least as large as H0. The rypical values for the average is around 210.
+
+#### 3.2.7 Compute 95% CI
+```{r}
+CI <- quantile(simulated_averages, c(0.025, 0.975))
+CI
+```
+
+#### 3.2.8 Is possible that the average price in Seattle is in fact 250?
+Based on the 95% CI, H0 falls outside of the interval therefore, we reject the null hypothesis H0 for average price in Seattle is $250 by 5% significance level.
+
+### 3.3 Z-test
+#### 3.3.1 What is the expected value and standard deviation of your sample average?
+```{r}
+sd_sample_avg <- 244.3358/sqrt(266)
+sd_sample_avg
+```
+
+The sample mean of Seattle price will be 210.6466 and the sample standard deviation of Seattle price will be 14.98119
+
+#### 3.3.2 Why should these number be quite similar?
+Due to CLT, the distribution of sample mean will be roughly normal with the same mean of population and sd will be divided by square root of sample size.
+
+#### 3.3.3 What is the critical z value
+The critical z value for significance a = 0.05 would be +- 1.96
+
+#### 3.3.4 Compute the theoretical confidence intervals
+```{r}
+Z_critical = 1.96
+ci_lower <- 210.6466 - Z_critical * sd_sample_avg
+ci_upper <- 210.6466 + Z_critical * sd_sample_avg
+ci_lower
+ci_upper
+```
+The lower CI is 181.2835 and the upper CI is 240.0097
+
+#### 3.3.5 Compute z-value
+```{r}
+Z_value <- abs((210.6466-250)) / sd_sample_avg
+Z_value
+```
+Z-value is 2.626854 which is more than critical Z value for significance a = 0.05
+
+#### 3.3.6 What kind of standard deviation do you need to use
+I need to use the standard deviation of sample average which is population sd divided by square root of sample size
+
+## 4 How Is Basketball Game Score Calculated?
+### 4.1 Load data. Do basic checks.
+```{r}
+bb <- read_delim("../data/fox-deaaron_23-24.csv.bz2")
+dim(bb)
+summary(bb)
+sum(is.na(bb))
+sample_n(bb, 10)
+```
+There are 82 rows and 30 Columns. Most columns are in chr, which is not what we expected to see. We should convert some of them in numeric. There are some unnamed columns that automatically be named as `...6` and `...8`. There are 52 missing values mostly from column `...6`
+
+### 4.2 Find how many games did DeAaron Fox actually play in this season.
+```{r}
+game_played <- bb %>% 
+  filter(MP != "Inactive")
+nrow(game_played)
+  
+```
+I've notice in the dataset that DeAaron Fox's performance stat will be labeled as Inactive for some games. Therefore I assume that these are the game he didn't play and filter out these rows.
+
+### 4.3 Clean the data and ensure the relevant variables are of numeric type so we can use those in the regression models.
+```{r}
+convert <- c("GmSc", "FGA", "FG", "3P", "3PA", "FT", "FTA", "ORB", "DRB", "AST", "STL", "BLK", "TOV", "PF", "PTS", "FG%")
+
+game_played[convert] <- lapply(game_played[convert], function(x) as.numeric(as.character(x)))
+```
+
+### 4.4  Analyze the game score GmSc.
+```{r}
+game_score <- game_played$GmSc
+range(game_score)
+mean(game_score)
+sd(game_score)
+ggplot(game_played, aes(x = GmSc)) + 
+  geom_histogram(binwidth = 5, fill = "pink", color = "cyan") + 
+  labs(title = "Histogram of Game Score (GmSc)", x = "GmSc", y = "Frequency")
+```
+The range of game score is from -5.4 to 37.8. Its mean is 19.55676 and standard deviation is 8.337916. The distribution is slightly left skewed.
+
+### 4.5 Run a simple regression model explaining game score GmSc by field goal attempts FGA:
+```{r}
+model1 <- lm(GmSc ~ FGA, data = game_played)
+summary(model1)
+```
+The Intercept (β0) means when DeAaron Fox doesn't try to attempt for 2 or 3 point shots, he will get approximately 1.8292 game score.
+The FGA (β1) means when DeAaron Fox do one more attempt for 2 or 3 point shots, he will get approximately additional 0.8469 game score. FGA is statistically significant since the P value is less than 0.05, it shows a strong evidence to reject the null hypothesis.
+
+### 4.6 Game score related to field goals (FG) and field goal attempts (FGA)
+```{r}
+model2 <- lm(GmSc ~ FGA + FG, data = game_played)
+summary(model2)
+```
+(a)FG means as other factor unchanged, one additional field goal would increase DeAaron Fox's game score by 2.9093. It is statistically significant since P value is significantly less than 0.05
+(b)FGA means as other factor unchanged, one additional field goal attempt would decrease DeAaron Fox's game score by -0.6335. It is statistically significant since P value is significantly less than 0.05
+(c)In simple terms, the first model describe more attempts generally leads to higher score since player score more tend to shoot more. The seond model consider both field goals and attempts, unsuccessful attempts (FGA) lead to decrease in game score. The successful attempts (FG) contribute to the game score.
+(d) R square of this model is 0.7524, R square from previous model is 0.2446. The difference indicate that this model explain a significant more proportion of variance in game score. Which means this model performs better than the simple regression model with FGA only.
+
+### 4.7 Now include all the independent numerical variables
+```{r}
+full_model <- lm(GmSc ~ FG + FGA + `3P` + `3PA` + FT + FTA + ORB + DRB + AST + STL + BLK + TOV + PF, data = game_played)
+summary(full_model)
+```
+(a) Standard Errors are generally pretty small, indicating the estimate is precise. The t values are generally pretty large, indicating a strong evidence of rejecting null hypothesis.
+(b) R square is 1 which means the model explain 100% of the variance in game score. It suggests that there's an overfitting issue in this model.
+(c) It indicated the effect of TOV on game score is statistically significant since P value less than 0.05. It means that each additional turnover would decrease DeAaron Fox's game score by 1. Therefore it's not a good thing for the team.
+
+### 4.8 Did you recover the same formula?
+I pretty much recover the same formula
+
+## How many hours?
+Approximately 12

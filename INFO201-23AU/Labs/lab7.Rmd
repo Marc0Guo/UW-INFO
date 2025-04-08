@@ -1,0 +1,127 @@
+---
+title: "lab7"
+output: html_document
+date: "2023-11-16"
+---
+## 1.1
+Filter only those people with income > 0
+```{r}
+library(tidyverse)
+library(ggplot2)
+ih <- read.delim("../Data/income-height.csv.bz2")
+sample_n(ih, 5)
+
+ih <- ih %>% 
+  filter(income > 0)
+```
+
+## 1.2
+For each person in the dataset, compute 5-inch height category.
+```{r}
+ih <- ih %>% 
+  mutate(height_category =(height %/% 5) * 5)
+
+head(ih)
+```
+## 1.3
+Make a barplot for average income vs each age category
+```{r}
+ih %>% 
+  group_by(height_category) %>% 
+  summarize(average_income = mean(income, na.rm = TRUE)) %>% 
+  ggplot(aes(height_category, average_income,
+             fill = factor(height_category))) + 
+  geom_col() + 
+  labs(title = "Average Income for Each Age Category",
+       x = "Height Category (inches) ",
+       y = "Average Yearly Income ($)",
+       fill = "Height Category")
+```
+### the plot suggest that there is a general trend about taller people higher income, except people in 75 inches genrally earn less than people in 70 inches. People in 80 inches earn a lot more than others
+
+## 1.4
+Make a barplot with two sets of bars (for men/women)
+next to each other, filled with a different colors.
+```{r}
+ih %>% 
+  group_by(height_category, sex) %>% 
+  summarize(average_income = mean(income, na.rm = TRUE)) %>% 
+  ggplot(aes(height_category, average_income,
+             fill = sex)) + 
+  geom_col(position = "dodge") + 
+  labs(title = "Average Income for Each Age Category",
+       x = "Height Category (inches) ",
+       y = "Average Yearly Income ($)",
+       fill = "Height Category")
+```
+## 1.5
+```{r}
+ih %>% 
+  ggplot(aes(factor(height_category), income)) + 
+  geom_boxplot(aes(fill = height_category)) + 
+  labs(title = "Income for Each Age Category",
+       x = "Height Category (inches) ",
+       y = "Income ($)")
+```
+
+## 1.6
+```{r}
+ih %>% 
+  ggplot(aes(factor(height_category), income, fill = sex)) +
+    geom_boxplot() +
+    labs(title = "Income by Height Category(Seperate Gender)",
+         x = "Height Category",
+         y = "Income")
+```
+
+### men generally earn a little more than women with same height category，There is a general trend for taller people has more income. Men with 80 inches earn significantly more.
+
+## 2.1
+```{r}
+covid <- read_delim("../Data/covid-scandinavia-wide.csv.bz2")
+
+covid %>% 
+  sample_n(5)
+```
+
+### a row represent the confirmed cases and death cases in a certain date in countries in Scandinavia (Denmark, Finland, Norway and Sweden)
+
+## 2.2
+```{r}
+first_date <- min(covid$date, na.rm = TRUE)
+last_date <- max(covid$date, na.rm = TRUE)
+print(paste("First date in data is", first_date, "and last date in data is", last_date))
+```
+
+## 2.3
+```{r}
+covid %>% 
+  filter(country == "Denmark") %>% 
+  ggplot(aes(Confirmed, Deaths, color = "RED")) + 
+  geom_point(alpha = 1/5, size = 1) +
+  labs(title = "Covid Confirmed Cases vs Deaths cases in Denmark",
+       x = "Confirmed Cases", 
+       y = "Deaths Cases")
+```
+
+## 2.4
+```{r}
+covid %>% 
+  ggplot(aes(Confirmed, Deaths),
+         col = country) + 
+  geom_point(alpha = 1/5, size = 1, aes(color = country)) +
+  labs(title = "Confirmed Cases vs Deaths cases in Denmark",
+       x = "Confirmed Cases", 
+       y = "Deaths Cases")
+```
+
+## 2.5
+```{r}
+covid %>% 
+  ggplot(aes(Confirmed, Deaths),
+         col = country) + 
+  geom_path(aes(color = country)) +
+  labs(title = "Confirmed Cases vs Deaths cases in Denmark",
+       x = "Confirmed Cases", 
+       y = "Deaths Cases")
+```

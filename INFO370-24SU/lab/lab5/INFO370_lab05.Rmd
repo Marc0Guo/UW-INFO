@@ -1,0 +1,103 @@
+---
+title: "INFO370_lab05"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+## 1
+### 1.1
+```{r}
+dd <- read_delim("../../data/diamonds.csv.bz2")
+dim(dd)
+sample_n(dd, 5)
+```
+There are 53940 dinomds
+
+### 1.2
+```{r}
+table(dd$cut)
+```
+
+
+There are 1610 Fair, 4906 Good, 21551 Ideal, 13791 Premium, and 12082 Very Good.
+
+## 2
+### 2.1
+```{r}
+m <- lm(price ~ carat + cut , data = dd)
+summary(m)
+```
+### 2.2
+The reference category would be fair for cut
+
+### 2.3.a
+The carat is when the diamond's cut is fair, one additional carat of diamond would be 7871.08 more expensive
+
+### 2.3.b
+When the carat of two diamonds remain the same, the Ideal cut diamond would be 1800.92 more expensive than fair cut diamond.
+
+### 2.3.c
+```{r}
+1800.92-1510.14
+```
+In average, ideal-cut diamonds are $290.78 more expensive than very good cut diamonds within same carat.
+
+### 2.3.d
+```{r}
+7871.08-3875.47+1439.08
+```
+My model predict that the average price for 1ct premium cut diamond is $5434.69
+
+## 3
+### 3.1
+```{r}
+ggplot(sample_n(dd, 1000), aes(y = price, x = carat)) +
+  geom_smooth(method = "lm", col = "purple")+
+  geom_point(alpha = 0.6, col = "gold2")
+```
+Our linear model doesn't capture the the relationship between price cut and carat 
+### 3.2
+```{r}
+ggplot(sample_n(dd, 1000), aes(y = log(price), x = carat)) +
+  geom_smooth(method = "lm", col = "purple")+
+  geom_point(alpha = 0.6, col = "gold2") +
+  labs(title = "Log Scale of price")
+```
+
+```{r}
+ggplot(sample_n(dd, 1000), aes(y = price, x = log(carat))) +
+  geom_smooth(method = "lm", col = "purple")+
+  geom_point(alpha = 0.6, col = "gold2") +
+  labs(title = "Log Scale of carat")
+```
+
+```{r}
+ggplot(sample_n(dd, 1000), aes(y = log(price), x = log(carat))) +
+  geom_smooth(method = "lm", col = "purple")+
+  geom_point(alpha = 0.6, col = "gold2") +
+  labs(title = "Log Scale of both carat and price")
+```
+The plot of both variables in log scale looks the best
+
+
+### 3.3 
+```{r}
+m2 <- lm(log(price) ~ log(carat) + cut , data = dd)
+summary(m2)
+```
+
+### 3.4
+I got a pretty high R square of 0.9371 which means the model did great on capturing the relationhship between price carat and cut
+
+### 3.5
+The intercept coefficient means that when the fair cut diamond is 1 carat $e^0$ the price of it would be $e^{8.2}$.
+The log(carat) coefficient means that when you increase the log(carat) of a diamond by one the price of it would be increased by $e^{1.69}$ percent.
+The cutGood coefficient means that when you get two diamond of same carat, the good cut one would be 0.163245 percent more expensive than the fair cut one.
+The cutIdeal coefficient means that when you get two diamond of same carat, the ideal cut one would be 0.317212 percent more expensive than the fair cut one.
+The cutPremium coefficient means that when you get two diamond of same carat, the Premium cut one would be 0.238217 percent more expensive than the fair cut one.
+The cutVery Good coefficient means that when you get two diamond of same carat, the Premium cut one would be 0.240753 percent more expensive than the fair cut one.

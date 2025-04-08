@@ -1,0 +1,427 @@
+---
+title: "INFO370-PS04"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(caret)
+library(dplyr)
+library(margins)
+```
+# 1
+## 1.1 Replicate the model from PS03 question 1.2.3. 
+```{r}
+abnb <- read_delim("../data/airbnb-bangkok-listings.csv.bz2", 
+                   col_select = c("bedrooms", "price", "accommodates", "room_type"))
+airbnb <- abnb %>%
+  mutate(price = as.numeric(gsub("[$,]", "", price))) %>%
+  filter(!is.na(bedrooms))
+airbnb <- airbnb %>% 
+  mutate(
+     bedrooms = cut(bedrooms,
+                   breaks = c(1, 2, 3, 4, Inf),
+                   labels = c("1", "2", "3", "4+"),
+                   right = FALSE),
+    accommodates = cut(accommodates,
+                   breaks = c(1, 2, 3, 4, Inf),
+                   labels = c("1", "2", "3", "4 and more"),
+                   right = FALSE)
+  )
+m_log <- lm(log(price) ~ bedrooms + room_type + accommodates, data = airbnb) 
+```
+## 1.2 use the model to predict (log) price for each listing
+```{r}
+yhat <- predict(m_log)
+```
+
+## 1.3 Compute RMSE
+```{r}
+rmse <- sqrt(mean((log(airbnb$price) - yhat)^2))
+rmse
+```
+The root mean squared error is 0.7179466
+
+## 1.4 use your model to predict the price for full 2BR apartment
+```{r}
+full2b4a <- airbnb %>% 
+  filter(bedrooms == "2" & accommodates == "4 and more" & room_type == "Entire home/apt")
+yhat <- predict(m_log, full2b4a)
+mean(yhat)
+```
+The mean predicted log price of the model is 7.722903
+
+## 1.5  Compute the average log price for all these listings in data in this group
+```{r}
+mean(log(full2b4a$price))
+```
+The average price for all listing in 2BR apartment that accomodates 4 people is 7.716905 which is pretty close to predicted result of 7.722903
+
+# 2 Heart attack: predictive modeling
+## 2.1 Inferential modeling
+### 2.1.1
+```{r}
+ha <- read_delim("../data/heart.csv.bz2")
+dim(ha)
+summary(ha)
+sum(is.na(ha))
+sample_n(ha, 5)
+```
+There's 303 rows and 14 columns. There are no missing values in this data and all variables are in acceptable range.
+
+### 2.1.2 Explain categorical varibales
+`Sex` is categorical since people are either male or female. 
+
+`CP` is categorical since it represents different type of chest pain. This is important for us to change since it has 4 categories.
+
+`fbs` is categorical since it indicates either true or false. 
+
+`restecg` is categorical since it indicates different type of resting electrocardiographic results. This is also important for us to change since it has 3 different categories.
+
+`exng` is categorical since it indicate either yes or no 
+
+`output` is categorical since it indicates whether a person have heart attact.
+
+### 2.1.3 Convert those variables to categoricals
+```{r}
+ha <- ha %>% 
+  mutate(
+    sex = factor(sex),
+    cp = factor(cp),
+    fbs = factor(fbs),
+    restecg = factor(restecg),
+    exng = factor(exng),
+    output = factor(output)
+  )
+```
+
+### 2.1.4 Construct a logistic regression model 
+```{r}
+m <- glm(output ~ ., data = ha, family = binomial())
+summary(margins(m))
+```
+
+### 2.1.5 Interpret the results of age, sex, and exng.
+The reference category for this model is female at age 0 without exercise induced angina.  
+
+The margin of `Sex1` indicates that with other factors unchanged being a male on average decreases the probability of heart attact by 19.7 percent point than female.
+
+The P value of `Sex1` is 0.0001 which is less than 0.05, therefore it is statistically significant. 
+
+The coefficient of `age` indicates that with other factors unchanged, a person who is one year older on average has a probability of 0.04 percent point less likely to get heart attact. 
+
+The p value of `age` is 0.8705 which is more than 0.05, therefore it is not statistically significant. 
+
+The coefficient of `exng` indicates that with other factors unchanged a person with exercise induced angina on average has a probability of 10.7 percent point less likely to get heart attact than a person without exercise induced angima. 
+
+The p value is 0.0405 which is less than 0.05, therefore it is statistically significant.
+
+## 2.2 Predictive modeling with caret
+### 2.2.1 convert your outcome variable (here output) to a categorical
+```{r}
+ha <- ha %>% 
+  mutate(output = factor(output))
+```
+
+### 2.2.2 Fit the model using the train() function.
+```{r}
+m <- train(output ~ . , data = ha, family = "binomial", method = "glm")
+```
+
+### 2.2.3 Predict the probability of having a heart attack
+```{r}
+prob <- predict(m, type = "prob")
+print(prob[1:10, 2])
+```
+
+### 2.2.4 Predict the label (outcome)
+```{r}
+yhat <- predict(m)
+head(yhat, 10)
+```
+
+### 2.2.5 Show that both methods give you the same results.
+```{r}
+table(yhat, prob[2] > 0.5)
+```
+Both method gives me same result.
+
+### 2.2.6 Display the confusion matrix.
+```{r}
+cm <- table(yhat, ha$output)
+cm
+```
+
+### 2.2.7 Compute and display precision and recall.
+```{r}
+cm_f <- confusionMatrix(yhat, ha$output, 
+                        positive = "1", mode = "prec_recall")
+cm_f
+TN <- cm[1, 1]
+FN <- cm[1, 2]
+TP <- cm[2, 2]
+FP <- cm[2, 1]
+P <- TP/(TP+FP)
+R <- TP/(TP+FN)
+P
+R
+
+precision(yhat, ha$output, relevant = "1")
+recall(yhat, ha$output, relevant = "1")
+```
+
+### 2.2.8 which measure should we try to improve 
+We should try to improve recall, since we want to minimize false negative which is missing the detection of a heart attack.
+
+### 2.2.9 How confident is the model in its predictions?
+```{r}
+hist(prob$'1', col= "pink", main = "Histogram of Predicted Probabilities", xlab = "Predicted Probability of Heart Attack")
+```
+
+The model is mostly confident since the values mostly appears around 0 and 1.
+
+### 2.2.10 Now create another very simple model 
+```{r}
+table(ha$output)
+yhat <- factor(rep("1", nrow(ha)), levels = levels(ha$output))
+naive_m <- confusionMatrix(yhat, ha$output,
+                           positive = "1", mode = "prec_recall")
+naive_m
+
+
+A <- (165)/(165 + 138)
+P <- 165/(165+138)
+R <- 165/165
+A
+P
+R
+```
+Having heart attack is more common, so I choose to use 1 for all values. \\
+The accuracy and precision is both 0.5445545 and the recall is 1.
+
+### 2.2.11
+The logistic regression model has significantly higher accuracy and precision, F1 score. Even its recall was not as high as the naive model, it predicts only the majority which is not useful in real world scenario.
+
+# 3 Confusion matrix
+## 3.1 What are the actual and what are the predicted values in this context?
+The actual values are determined by manual review \\
+The predicted values are based on criminal codes.
+
+## 3.2 Does the CM have actual values in rows, or predicted values in rows?
+The CM has predicted values in rows and actual values in columns.
+
+## 3.3 Does the CM have positive values first or negative values first?
+The CM has positive values in first.
+
+## 3.4 How many false positives and false negatives are reported?
+There are 360 False negative and 0 False positives.
+
+## 3.5 Display the CM using the convention
+```{r}
+TN <- 4953 
+TP <- 77   
+FP <- 0   
+FN <- 360    
+
+
+cm <- matrix(c(TN, FP, FN, TP), nrow = 2, byrow = TRUE)
+cm
+```
+ Actuals in rows and negative first
+ 
+## 3.6 NPV, Se
+NPV means negative predictive value which is the proportion of Predicted “no firearm related” that are actually "no firearm related” \\
+```{r}
+4953 / 5390
+```
+
+Se means sensitivity which is the proportion of actual firearm-related that are correctly identified by the model. \\
+
+```{r}
+77/437
+```
+
+```{r}
+precision <- TP/(TP+FP)
+recall <- TP/(TP+FN)
+F1 <- 2*precision*recall/(recall+precision)
+precision
+recall
+F1
+```
+The precision is 1, the recall is 0.1762014, and the F-score is 0.2996109.
+
+# 4 Overfitting and validation
+## 4.1 Explore data
+### 4.1.1 Load the data. Are there any missings? 
+```{r}
+cancer <- read_delim("../data/wdbc.csv.bz2")
+sum(is.na(cancer))
+cancer <- cancer %>% 
+  select(-id) %>% 
+  mutate(diagnosis = factor(diagnosis, levels = c("B", "M")))
+```
+There are no missings in the data set.
+
+### 4.1.2 Split your data into training and validation chunks
+```{r}
+set.seed(370)
+it <- createDataPartition(cancer$diagnosis, p = 0.8, list = FALSE)
+b0t <- cancer[it, ]
+b0v <- cancer[-it, ]
+```
+
+### 4.1.3 How many cancer/non-cancer cases do we have in training data?
+```{r}
+table(b0t$diagnosis)
+```
+There are 170 cancer cases and 286 non-cancer cases in training data. Non-cancer cases are majority categories.
+
+### 4.1.4 a naive model that assigns all results to the majority category.
+Since Non cancer cases are majority, naive model would predict every cases non cancer. Which is B = 456, M = 0 \\
+Set have cancer to be positive and non cancer to be negative.
+```{r}
+TN <- 286
+TP <- 0   
+FP <- 0   
+FN <- 170   
+
+cm <- matrix(c(TN, FP, FN, TP), nrow = 2, byrow = TRUE)
+cm
+```
+We have negative goes first and actuals in rows.
+
+### 4.1.5 What is the accuracy, precision and recall of the naive model when computed on your validation
+data?
+```{r}
+table(b0v$diagnosis)
+TN <- 71
+TP <- 0   
+FP <- 0   
+FN <- 42   
+A <- (TP+TN)/(TN+TP+FN +FP)
+P <- TP/(TP+FP)
+R <- TP/(TP+FN)
+A
+P
+R
+```
+The accuracy is 0.6283186, the precision is 0, an the recall is 0.
+
+### 4.1.6 which measure is the most appropriate
+Recall should be the most critical measure htere since it indicates the model's ability to correctly identify cancer cases. We want to minimize the the cancer cases we miss. We should also take care of overall combination since we can't predict everyone to have cancer.
+
+## 4.2 Three-feature model to predict cancer
+### 4.2.1 use these three features to train a logistic regression model
+```{r}
+m <- train(
+  diagnosis ~ texture.mean + concpoints.mean + symmetry.se , data = b0t,
+  family = binomial, method = "glm"
+)
+```
+
+### 4.2.2 Display the confusion matrix
+```{r}
+yhat <- predict(m, newdata = b0v)
+confusionMatrix(yhat, b0v$diagnosis,
+                positive = "M", mode = "prec_recall")
+```
+
+### 4.2.3 How does the results look like, compared to the naive model from 4.1.5?
+Accuracy, precision and recall are all higher than the naive model.
+
+
+### 4.2.4 Now repeat this with 5 different sets of three features.
+```{r}
+m <- train(
+  diagnosis ~ radius.mean + texture.mean + perimeter.mean , data = b0t,
+  family = binomial, method = "glm"
+)
+yhat <- predict(m, newdata = b0v)
+cm <- confusionMatrix(yhat, b0v$diagnosis,
+                positive = "M", mode = "prec_recall")
+cm$byClass["Recall"]
+```
+```{r}
+m <- train(
+  diagnosis ~ fracdim.mean + smoothness.mean + compactness.mean , data = b0t,
+  family = binomial, method = "glm"
+)
+yhat <- predict(m, newdata = b0v)
+cm <- confusionMatrix(yhat, b0v$diagnosis,
+                positive = "M", mode = "prec_recall")
+cm$byClass["Recall"]
+```
+
+```{r}
+m <- train(
+  diagnosis ~ fracdim.mean + radius.mean + perimeter.mean , data = b0t,
+  family = binomial, method = "glm"
+)
+cm <- confusionMatrix(yhat, b0v$diagnosis,
+                positive = "M", mode = "prec_recall")
+cm$byClass["Recall"]
+```
+```{r}
+m <- train(
+  diagnosis ~ symmetry.worst + radius.mean + perimeter.mean , data = b0t,
+  family = binomial, method = "glm"
+)
+yhat <- predict(m, newdata = b0v)
+cm <- confusionMatrix(yhat, b0v$diagnosis,
+                positive = "M", mode = "prec_recall")
+cm$byClass["Recall"]
+```
+
+```{r}
+m <- train(
+  diagnosis ~ symmetry.worst + radius.mean + fracdim.mean , data = b0t,
+  family = binomial, method = "glm"
+)
+yhat <- predict(m, newdata = b0v)
+cm <- confusionMatrix(yhat, b0v$diagnosis,
+                positive = "M", mode = "prec_recall")
+cm$byClass["Recall"]
+```
+
+## 4.3 How does model performance depend on the number of features? 
+### 4.3.1 Write a loop over all predictors
+```{r warning=FALSE}
+features <- colnames(cancer)[-1]
+columns <- character(0)
+Rv <- numeric()
+Rt <- numeric()
+for(n in features) {
+  columns <- c(columns, n)
+  formula <- as.formula(paste("diagnosis ~", paste(columns, collapse = " + ")))
+  m <- train(formula , data = b0t,
+    family = binomial, method = "glm"
+  )
+  yhatt <- predict(m, newdata = b0t)
+  tcm <- confusionMatrix(yhatt, b0t$diagnosis,
+              positive = "M", mode = "prec_recall")
+  yhatv <- predict(m, newdata = b0v)
+  vcm <- confusionMatrix(yhatv, b0v$diagnosis,
+                positive = "M", mode = "prec_recall")
+
+  Rv <- c(Rv, vcm$byClass["Recall"])
+  Rt <- c(Rt, tcm$byClass["Recall"])
+} 
+```
+
+### 4.3.2 Make a plot
+```{r}
+data.frame(x = 1:30, Rv, Rt) %>% ggplot() +
+geom_line(aes(x, Rv), col = "seagreen2") + geom_line(aes(x, Rt), col = "mediumpurple2") + labs(title = "Recall as a function of features",
+        subtitle = "Green: validation; blue: training",
+        x = "Number of features",
+        y = "Recall")
+```
+
+### 4.3.3 Comment the results–what do you see?
+The recall generally increase as features increase for training function and reach to 1 starting around 22. 
+
+The recall increase for validation function untill 5 keep constant from 5 - 10. The rate oscilate between 10 to 24, follow a slightly decrease and a rapid increase. 
+
+The result have overfitting concern since training data reach to 1

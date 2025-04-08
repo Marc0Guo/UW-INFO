@@ -1,0 +1,251 @@
+---
+title: "INFO370-PS03"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+```
+# Model AirBnB Price
+## 1.1 Load and clean
+### 1.1.1 Load data
+```{r}
+abnb <- read_delim("../data/airbnb-bangkok-listings.csv.bz2", 
+                   col_select = c("bedrooms", "price", "accommodates", "room_type"))
+dim(abnb)
+sample_n(abnb, 5)
+summary(abnb)
+table(abnb$room_type)
+```
+There are 17040 rows of data. I selected bedrooms, price, room type and accommodates columns The price value was in character with dollar sign. There are 1840 NAs in bedroom column. The range seems to be reasonable with exception of maximum bedroom of 50 (still in acceptable range).
+
+### 1.1.2 Do the basic data cleaning
+```{r}
+airbnb <- abnb %>%
+  mutate(price = as.numeric(gsub("[$,]", "", price))) %>%
+  filter(!is.na(bedrooms))
+summary(airbnb)
+```
+
+### 1.1.3 Analyze the distribution of price.
+```{r}
+hist(log(airbnb$price), breaks = 30, main = "Distribution of Price", xlab = "Price in log scale", col = "pink")
+```
+The distribution of price is extremely right skewed. It looks relatively normal in log scale but still have long tail on right.
+
+### 1.1.4 Convert the number of bedrooms into 1, 2, 3, 4+
+```{r}
+airbnb <- airbnb %>% 
+  mutate(
+    bedrooms = cut(bedrooms,
+                   breaks = c(1, 2, 3, 4, Inf),
+                   labels = c("1", "2", "3", "4+"),
+                   right = FALSE)
+  )
+```
+
+## 1.2 Model
+### 1.2.1 Run a linear regression 
+```{r}
+m <- lm(price ~ bedrooms, data = airbnb) 
+summary(m)
+```
+The result shows that when the Airbnb has one bedroom would be approximately $1742.27
+The airbnb with two bedrooms would be approximately $1481.00 more expensive than the one with one bedroom.
+The airbnb with 3 bedrooms would be approximately $3317.37 more expensive than the one with one bedroom.
+The airbnb with 4 or more bedrooms would be approximately $6592.19 more expensive than the one with one bedroom.
+The result shows that bedroom variables are statistically significant with P value of $2e-16$
+The $R^2$ of 0.03551 indicates the model didn't do well on capturing the relationship between price and bedrooms
+
+### 1.2.2 repeat the process with log price
+```{r}
+m_log <- lm(log(price) ~ bedrooms, data = airbnb) 
+summary(m_log)
+```
+The result shows that when the Airbnb has one bedroom would be approximately 7.015033 log price 
+The airbnb with two bedrooms would be approximately 0.678053 log price more expensive than the one with one bedroom.
+The airbnb with 3 bedrooms would be approximately 1.124857 log price more expensive than the one with one bedroom.
+The airbnb with 4 or more bedrooms would be approximately 1.371225 log price more expensive than the one with one bedroom.
+The result shows that bedroom variables are statistically significant with P value of $2e-16$
+The $R^2$ of 0.2034 indicates the the model with log price perform better on capturing the relationship between price and bedrooms compare to the model with normal price.
+
+### 1.2.3 add two more variables to the model
+```{r}
+airbnb <- airbnb %>% 
+  mutate(
+    accommodates = cut(accommodates,
+                   breaks = c(1, 2, 3, 4, Inf),
+                   labels = c("1", "2", "3", "4 and more"),
+                   right = FALSE)
+  )
+```
+```{r}
+m_log <- lm(log(price) ~ bedrooms + room_type + accommodates, data = airbnb) 
+summary(m_log)
+```
+The refernce categories used the airbnb of 1 bedroom, Entire home/apt, and accomodating 1 person.
+The intercept means that the estimated log(price) for refernce category would be 6.90067
+It's interesting to see that the price would be more expensive as airbnb has more bedrooms or accomodates more people. These might be related since more rooms would essentially have more people to live.
+It's also interesting to see Hotel room cost more money than Entire home/apt and Private room or shared room cost less.
+Compared to the previous model the $R^2$ increased a bit, which means that including more factors `room type` and `accomodates` increase the precision of the model but since $R^2$ is still relatively low (0.2424), it might indicate that there are other factors influencing the price.
+
+
+## 1.3 Interaction effects
+### 1.3.1 Create the additional dummies
+```{r}
+airbnb <- airbnb %>%
+  mutate("br2+" = !bedrooms %in% c(1),
+         "ac3+" = !accommodates %in% c(1, 2))
+```
+
+### 1.3.2 Estimate the model 
+```{r}
+mi <- lm(log(price) ~ `br2+` * `ac3+` + room_type, data = airbnb)
+summary(mi)
+```
+
+### 1.3.3 Interpret the results
+1. The reference category is the Entire home/apt airbnb with less than 2 bedroom and accomodates less than 3 people.
+2. The listing would be approximately worth 0.39328 log price more if it has two bedrooms but doesn't accomodate more than 2 people.
+3. The listing would be approximately worth 0.10875 log price more if it has single bedroom and accomodates 3 or more people.
+4. The listing would be approximately worth 0.86649 log price more if it has at least 2 bedrooms and at least 3 accomodates
+
+### 1.3.4 Does the interaction effect capture important price behavior?
+The interaction effect does capture the important price behavior. Since the coefficient of interaction term is 0.36446 and it's statistically significant (p-value < 0.05). It indicates that listings with at least 2 bedrooms and acommodate at least 3 people have additional price effect on individual effect of 2+ bedrooms or 3+ accommodates.
+
+# 2 When will we hit 2C of global warming? 
+## 2.1 Load and prepare
+### 2.1.1 Load data
+```{r}
+hc <- read_delim("../data/hadcrut-5.0.2.0-annual.csv.bz2")
+head(hc, 5)
+hc <- hc %>% 
+  rename(
+    Anomaly = `Anomaly (deg C)`,
+    Cl_low = `Lower confidence limit (2.5%)`,
+    Cl_high = `Upper confidence limit (97.5%)`
+  )
+head(hc, 5)
+```
+
+### 2.1.2 Baseline anomaly
+```{r}
+ggplot(hc, aes(x = Time, y = Anomaly)) +
+  geom_point(col = "pink")
+```
+I saw a exponential growth in Anomaly over time. The growing rate was relatively low in 1850 to 1900. And it started growing faster and faster.
+
+### 2.2.1 Compute the baseline anomaly 
+```{r}
+bl_Anomaly <- hc %>% 
+  filter(Time <= 1900) %>% 
+  summarise(mean_anomaly = mean(Anomaly)) %>% 
+  pull(mean_anomaly)
+bl_Anomaly
+```
+the baseline anomaly (for 1850-1900) is -0.3564947
+
+### 2.2.2 Create a newc olumn that describes the temperature anomaly
+```{r}
+hc <- hc %>%
+  mutate(Anomaly_above = Anomaly - bl_Anomaly)
+head(hc, 5)
+```
+## 2.3 When will we hit +2C?
+### 2.3.1 Make a plot that shows the post-1960 data
+```{r}
+hc_1960 <- hc %>% 
+  filter(Time >= 1960)
+
+ggplot(hc_1960, aes(y = Anomaly, x = Time)) +
+  geom_smooth(method = "lm", col = "gold2")+
+  geom_point(alpha = 0.8, col = "purple") +
+  labs(title = "Plot of post 1960 Time vs Anomaly")
+```
+In my opinion, the regression line pretty much describe the behavior of the trend.
+
+### 2.3.2 Estimate a linear regression model
+```{r}
+m <- lm(Anomaly_above ~ I(Time-2000), data = hc_1960)
+summary(m)
+```
+$R^2$ is 0.9078 which indicates that the model did pretty well on capturing the relationship between Anomaly above industrial baseline and time after 1960.
+
+### 2.3.3 Interpret the slope
+The slope is 0.0180459 which means that an additional year would increase the anomaly above the industrial baseline by 0.0180459
+
+### 2.3.4 What does the intercept mean
+a. When use years of (1999, 2000, 2001, etc) the intercept it the Anomaly above industrial two thousand years ago
+b. When use years relative to 2000, the intercept means the Anomaly above industrial on year 2000
+Since P value is a very small number $2e-16$ that less than 0.05, the Time is statistically significant
+
+### 2.3.5 How much above the pre-industrial baseline is the world now, in 2024
+```{r}
+0.0180459 * 24 + 0.8083178
+```
+The anomaly would be 1.241419 now in 2024 above pre-industrial baseline.
+
+### 2.3.6 Which year will the trend hit 1.5C, and when will it hit 2C
+```{r}
+(1.5-0.8083178)/0.0180459 
+(2-0.8083178)/0.0180459 
+```
+The trend will hit 1.5C on around 2038 and it will hit 2C on around 2066
+
+### 2.3.7 Might the thresholds be actually crossed earlier or later than what you computed？
+I would expect it would expect the thresholds to be earlier than I computed. Since it's depending on emissions, technology development, government policy etc. These factors are not linear, so a linear model might not accurately capture the relationship.
+
+## 2.4 Is the trend quadratic? 
+### 2.4.1 Estimate a linear regression model
+```{r}
+qm <- lm(Anomaly_above ~ I(Time - 2000) + I((Time - 2000)^2), data = hc_1960)
+summary(qm)
+```
+
+### 2.4.2 Are both the linear and the quadratic term statistically significant?
+Both lienar and quadratic term are statistically significant since both of their P values are small numbers less than 0.05. It indicates that the optimal trend should also have a quadratic relationship.
+
+### 2.4.3 What does R^2 suggest
+The $R^2$ of 0.9221 suggests that the model did well on capturing the temperature trend. Its $R^2$ is higher than the $R^2$ of linear model which means that the quadratic model perform better on captureing the temperature trend.
+
+### 2.4.4 Make a plot that shows the temperature anomaly over years.
+```{r}
+
+ggplot(hc_1960, aes(x = Time, y = Anomaly_above)) +
+  geom_point(alpha = 0.7, col = "gold2") +
+  geom_smooth(method = "lm", col = "red", formula = y ~ x, linetype = "dashed") +
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2), col = "cyan2") +
+  labs(title = "Plot of post 1960 Time vs Anomaly with linear and quadratic line")
+  
+```
+
+### 2.4.5 Comment your plot
+It does seem like the quadratic line better describe the trend since.
+
+### 2.4.6 compute predictions till 2050
+```{r}
+years <- 24:50
+predictions <- 0.7714 + 0.02038*years + 1.371*10^(-4) * years^2
+pd <- data.frame(Year = years+2000, Prediction = predictions)
+pd
+```
+
+### 2.4.7 when will the world cross the 1.5C and 2C thresholds?
+Based on the prediction, if the quadratic trend remain the same, the world will cross 1.5C at 2030 and cross 2.0C at 2047. Compare to the linear trend the world will hit 1.5C and 2C sooner.
+
+## 3 Interpret regression results in the literature 
+### 3.1 Do those who have a partner have better mental health
+The slope is -0.47 for `Has partner` therefore people who have a partner on average tend to have worse mental health. The effect is not statistically significant since the P value is $0.150$ which is more than $0.05$.
+
+### 3.2 What is the effect of COVID exposure?
+The slope is 0.24 which indicates that covid exposure on average improves mental health. The result is not statistically significant since the P value is $0.129$ which is more than $0.05$.
+
+### 3.3 How is Financial distress related to mental health?
+The slope is 2.32 which indicates that financial distress would on average make mental health worse. The result is statistically significant since the P value is less than $.05$ 
+
+
+## How many hours?
+Around 8

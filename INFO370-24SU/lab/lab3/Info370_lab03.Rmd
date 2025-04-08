@@ -1,0 +1,143 @@
+---
+title: "Info370_Lab03"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+## 1
+### 1.1
+$$
+E(x) = \sum_{i=1} ^n x_1 \times p_1
+$$
+
+```{r}
+Ex <- 1*0.5 + 0*0.5
+Ex
+```
+
+### 1.2
+
+$$
+Var(x) = E[(x - \mu)^2]\\
+Var(x) = E[x^2] - \mu^2
+$$
+
+```{r}
+varx <- (0^2 * 0.5 + 1^2 * 0.5) - (0.5)^2
+varx
+```
+
+### 1.3
+```{r}
+S <- 10
+n <- 1
+p <- 0.5
+X <- rbinom(S, n, p)
+mean(X)
+var(X)
+```
+
+### 1.4
+```{r}
+S <- 100000
+n <- 1
+p <- 0.5
+X <- rbinom(S, n, p)
+mean(X)
+var(X)
+```
+
+### 1.5
+The sample mean and variance are pretty close to theoretical value as sample size increase to 100000
+
+## 2
+### 2.1
+```{r}
+Ex <- 0*0.16 + 1 * 0.48 + 2*0.36
+Ex
+```
+
+### 2.2
+```{r}
+Varx <- (0^2 * 0.16 + 1^2 * 0.48 + 2^2 * 0.36) - (1.2)^2
+Varx
+```
+
+### 2.3
+```{r}
+S <- 10
+n <- 2
+p <- 0.6
+X <- rbinom(S, n, p)
+mean(X)
+var(X)
+```
+
+### 2.4
+```{r}
+S <- 100000
+n <- 2
+p <- 0.6
+X <- rbinom(S, n, p)
+mean(X)
+var(X)
+```
+
+### 2.5
+The sample mean and variance are pretty close to the theoretical value as sample size increased to 100000
+
+## 3
+### 3.1
+```{r}
+CLT <- function(S, sigma, R) {
+
+  averages <- numeric(R)
+  
+  for (i in 1:R) {
+    samples <- rlnorm(S, 0, sigma)
+    averages[i] <- mean(samples)
+  }
+  
+  hist(averages, breaks = 30, main = paste("Histogram of Averages (S =", S, ", sigma =", sigma, ")"),
+       xlab = "Averages", col = "pink")
+}
+```
+
+### 3.3
+```{r}
+CLT(20, 0.2, 10000)
+```
+
+### 3.4
+```{r}
+CLT(1, 1, 10000)
+```
+
+### 3.5
+```{r}
+CLT(20, 1, 10000)
+```
+
+### 3.6
+```{r}
+CLT(1, 2, 10000)
+```
+
+### 3.7
+```{r}
+CLT(20, 2, 10000)
+```
+
+### 3.8 
+When S = 1, the standard deviation = 2 case is more right skewed
+
+
+### 3.9 
+When S = 20, the standard deviation = 0.2 looks more normal.
+
+When standard deviation is fixed, more sample tends to make the distribution more normal
+When sample size is fixed, less standard deviation make function more normal
+The larger sample size the more normal it looks. While larger sd less normal it looks.
+
+After testing I notice that standard deviation affects skewness more than sample size.
+If the sd is really small such as 0.1, sample size won't change much of how normal it looks

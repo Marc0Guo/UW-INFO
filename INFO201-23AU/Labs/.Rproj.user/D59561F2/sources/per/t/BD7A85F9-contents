@@ -1,0 +1,124 @@
+# 2023.10.10
+
+# write your own fuction
+# add
+add <- function(x, y){
+  z <- x + y
+  return (z)
+}
+add(1, 3)
+
+# subtract
+subtract <- function(x, y){
+  z <- x-y
+  return (z)
+}
+subtract(1, 8)
+
+## you can also run the function in console
+
+
+subtract1 <- function(x, y){
+  cat("x=", x, ", y=", y, "\n")
+  z <- x-y
+  return(z)
+}
+subtract1(10, 1)
+subtract1(x=10, y=1)
+subtract1(y=10, x=1)
+
+a <- subtract(5,3)
+a # need to call the method again if print
+
+# method combine with math calculation
+subtract(5, 3)*10
+
+# in r, you may not need return keyword or assign in function
+subtract2 <- function(x, y){
+  x-y
+}
+subtract2(7,8)
+
+## write function ft2m
+## take 2 arguments ft, in
+## return height in meters
+## 1ft = 0.3048m
+## 1in = 0.0254m
+ft2m <- function(ft, inches){
+  ft*0.3048+inches*0.0254
+}
+ft2m(6, 1)
+
+## meter to feet
+m2ft <- function(meters){
+  round(meters/0.3048) 
+}
+m2ft(1.8542)
+
+## create default value "Seattle"
+greeting <- function(name, city = "Seattle"){
+  paste("Hi! I am", name, 
+        "and I am from", city)
+}
+greeting("Marco", 'Suzhou')
+greeting("Marco")
+greeting(city="Mars", "Alien")
+
+
+
+# vector
+
+a <- 1
+a + 1
+
+b <- c(1,2,3,7)
+b+1
+
+# create a vector from 1 to 100
+1:100
+
+c <- c(10, 20, 30, 70)
+b + c
+
+# how many elements in vector
+length(c)
+
+
+fruits <- c("apples", "oranges", "bananas")
+fruits
+# add elements to vector
+fruits <- c(fruits, "mangos")
+fruits
+
+veggies <- c()
+veggies
+
+veggies <- c(veggies, "carrots")
+veggies
+
+
+## create a vector 1, 2, 3,... 10 in a loop
+## initialize, elements in a loop
+num <- c()
+for (i in seq(1:10)){
+  num <- c(num, i)
+}
+num
+
+# recycle 
+## 1 2 3 4
+## 1 2 1 2 
+v1 <- 1:4
+v2 <- 1:2
+v1+v2
+
+v1 <- 1:4
+v2 <- 1:3
+v1+v2
+## warning code
+## longer object length is not a multiple of shorter object length
+
+
+# vector with logical comparision
+a <- 1:10
+a > 5

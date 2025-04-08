@@ -1,0 +1,115 @@
+---
+title: "INFO370lab04"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+## 1
+### 1.1
+```{r}
+temp <- read_delim("../../data/UAH-lower-troposphere-wide.csv.bz2")
+dim(temp)
+sample_n(temp, 5)
+```
+### 1.2
+```{r}
+range(temp$year)
+range(temp$month)
+```
+Year range from 1978 to 2024, month range from 1 to 12
+
+### 1.3
+```{r}
+temp <- temp %>% 
+  mutate(time = year + month/12)
+
+head(temp)
+```
+### 1.4
+```{r}
+temp %>% 
+  ggplot(aes(time, globe)) + 
+  geom_point(color = "gold2", alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "purple")
+```
+### 1.5
+We are not capture the trend within year, there might be some variation between that. But we would focus on the overall trend so it is a good approximation.
+
+### 1.6
+```{r}
+model <- lm(globe ~ time, data = temp)
+summary(model)
+```
+
+### 1.7
+The number means that as year increase time(year) by one, the global temperature deviation would increase by a mean of 0.01521. It is statistically significant at 0 confidence level.
+
+
+### 1.8
+Intercept means that when time 2000 years ago. The global temperature deviation has a mean of  -30.48959.
+
+### 1.9
+The “GTR” (global temperature report) from University of Alabama, Huntsville also shows a overall increasing trend.
+
+## 2
+### 2.1
+```{r}
+gdp <- read_delim("../../data/gapminder.csv.bz2")
+dim(gdp)
+sample_n(gdp, 5)
+```
+
+### 2.2
+```{r}
+gdp <- gdp %>% 
+  filter(time == 2016) %>% 
+  select(time, GDP_PC, lifeExpectancy)
+head(gdp)
+```
+
+### 2.3
+```{r}
+model2 <- lm(lifeExpectancy ~ GDP_PC, data = gdp)
+summary(model2)
+```
+
+### 2.4
+Intercept means that country with 0 GDP per capita ($) would have a mean of 6.864e+01 (years) Life expectancy at birth
+The GDP_PC means that as GDP per capita increase 1 unit, the life expectancy would increase by 2.477e-04 (years)
+The relationship between GDP and life expectancy statistically significant, since p value is less than 0.5
+
+
+### 2.5
+```{r}
+model2 <- lm(lifeExpectancy ~ I(GDP_PC/1000), data = gdp)
+summary(model2)
+```
+
+### 2.6
+The intercept keep the same. The slope would be as gdp increase by 1000$ the life expectancy would increase by 0.24766(year). It would make explaination easier as we want to study life expectancy vs month
+
+### 2.7
+```{r}
+gdp %>% 
+  ggplot(aes(GDP_PC, lifeExpectancy)) + 
+  geom_point(color = "gold2", alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "purple")
+```
+The relationship is not really linear.
+
+```{r}
+
+model2 <- lm(lifeExpectancy ~ log(GDP_PC/1000), data = gdp)
+summary(model2)
+
+gdp %>% 
+  ggplot(aes(log(GDP_PC/1000), lifeExpectancy)) + 
+  geom_point(color = "gold2", alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "purple") 
+```

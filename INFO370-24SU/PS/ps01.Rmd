@@ -1,0 +1,338 @@
+---
+title: "ps01"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+## 1 Make election data ready for analysis
+
+### 1.1 Load and check dataset
+
+#### 1.1.1 Load Data and basic checks
+```{r message=FALSE}
+us_elec <- read_delim("../data/us-elections_2000-2020.csv.bz2")
+dim(us_elec)
+```
+I loaded data. There's 37390 rows and 24 columns in the data frame.
+
+```{r}
+names(us_elec)
+```
+After checking, all variables in documentation are represented in the dataset.
+
+```{r}
+colSums(is.na(us_elec))
+```
+There are 4 missing values in candidatevotes, 6762 in income, 6762 in population, 20 in BIRTHS2020, 20 in DEATHS2020. 
+
+```{r}
+sapply(us_elec, class)
+```
+All variable was in correct data type based on documentation.
+
+#### 1.1.2 What does a row represent
+```{r}
+head(us_elec, 5)
+```
+A row in the data represents the election information of candidates from different party in specific county in specific year.
+
+
+### 1.2 Fill missings
+#### 1.2.1 Print out rows 6263 to 6272
+```{r}
+us_elec %>% 
+  select(FIPS, county, year, income) %>% 
+  slice(6263:6272) %>% 
+  print()
+```
+
+#### 1.2.2.a Expected values for NAs
+Kauai County 2020: Based on the given data from 2012 to 2016. I would expect the income for 2020 has the same growth rate Therefore I got `52063` by adding the growth increment `7105` to the 2016 income `44958`.
+
+Maui 2000: Since Maui and Kauai are geographically close based on `FIPS`, I would infer a similar income and growth pattern. Therefore I would assume `Maui 2000` has income `16538` by using Kauai 2012's income of 37853 - (7105 * 3).
+
+#### 1.2.2.b Relationship between existing and missing data
+The missing value could be inferred from available data by analyzing the growth patterns and geographical similarities using `income`, `county`, and `fips`. 
+
+#### 1.2.2.c Method used to fill out missing
+I would used `downup` method to ensure that missing income are filled by both past and future closest data points. I would like to take care of situation where missing values appeares at the beginning or end of dataset.
+
+#### 1.2.2.d Ensure correct filling
+Each county has their unique FIPS code while there might be difference in county name such as `Kauai` and `Kauai County`. Therefore, I would group by the data set by FIPS code.
+
+#### 1.2.3 Fill missings using most recent values
+```{r}
+us_elec <- us_elec %>% 
+  group_by(FIPS) %>% 
+  fill(everything(), .direction = "downup") %>% 
+  ungroup()
+```
+
+#### 1.2.4 Print out same lines of data from 1.2.1
+```{r}
+us_elec %>% 
+  select(FIPS, county, year, income) %>% 
+  slice(6263:6272) %>% 
+  print()
+```
+The result is what I expected since Kauai 2020 was filled using Kauai 2016 income data. Since Maui doesn't have most recent values in 2000 and 2004, there will still NAs.
+```{r}
+sum(is.na(us_elec$income))
+```
+
+### 1.3 Feature engineering
+#### 1.3.1 
+A row should represent a single county's election information in a specific year. Some columns might be in this dataset contains county ID, county name, state, year, election winner, income, ethnic demographics.
+
+#### 1.3.2 New data frame of 2020 election data
+```{r}
+df_2020 <- us_elec %>% 
+  filter(year == 2020) 
+
+democrats <- df_2020 %>% 
+  filter(party == "democrat")
+
+republicans <- df_2020 %>% 
+  filter(party == "republican") %>% 
+  select(FIPS, candidatevotes)
+
+merged_data <- merge(democrats, republicans, by = "FIPS", suffixes = c("_dem", "_rep"))
+
+df_2020 <- merged_data %>%
+  mutate(dem_won = ifelse(candidatevotes_dem > candidatevotes_rep, 1, 0))
+
+head(df_2020, 5)
+```
+I've added a column `dem_won` that represents whether or not democrats won in that county in 2020. 1 means won and 0 means loss.
+
+#### 1.3.3.a Calculate population density (population in 1000s / land area)
+```{r}
+df_2020 <- df_2020 %>% 
+  mutate(pop_density = population / 1000 / LND010200D)
+```
+#### 1.3.3.b Calculate percentage of college graduate by (Persons over 25 yrd with bachelor degree / Persons over 25 yrd)
+```{r}
+df_2020 <- df_2020 %>% 
+  mutate(college_grad = (EDU695209D / EDU600209D) * 100)
+```
+
+#### 1.3.3.b Convert income to scale in $1000
+```{r}
+df_2020 <- df_2020 %>% 
+  mutate(income = income / 1000)
+```
+
+#### 1.3.4 Compute yearly birth rate and death rate (births/deaths per 1000 people per year)
+```{r}
+df_2020 <- df_2020 %>% 
+  mutate(birth_rate = BIRTHS2020*4/population/1000) %>% 
+  mutate(death_rate = DEATHS2020*4/population/1000)
+```
+Since the birth and death count is not recorded in year but three months. I decided to multiply the data by 4 to represent the yearly rate.
+
+#### 1.3.5 Check variable range
+```{r}
+columns <- c("dem_won", "pop_density", "college_grad", "income", "birth_rate", "death_rate")
+
+for (col in columns) {
+  print(range(df_2020[[col]], na.rm = TRUE))
+}
+```
+After checking the range of variables i've created. `pop_density` doesn't seems right. The maximum value is ininity.
+
+```{r}
+df_2020 <- df_2020 %>% 
+  mutate(pop_density = ifelse(is.infinite(pop_density), NA, pop_density)) %>% 
+  filter(!is.na(pop_density))
+```
+Therefore, I decided to replace those infinite values with NA and filter out those NAs
+
+#### 1.3.6 How many rows in final data
+```{r}
+print(nrow(df_2020))
+```
+There are 3058 rows in my final data
+
+#### 1.3.7 Select variables I created
+```{r}
+df_2020 <- df_2020 %>% 
+  select(county, dem_won, pop_density, college_grad, income, birth_rate, death_rate)
+
+sample_n(df_2020, 10)
+```
+The data frame looks good. All variables are in a reasonable range.
+
+## Compare differently distributed data
+### 2.1 Human Bodies 
+#### 2.1.1 What kind of measure for height
+It should be ratio measure since it has well defined zero. We can also say a person is twice as high as someone. Height should also be continuous positive measure since it could be any value within a specific range and it can't be negative.
+
+#### 2.1.2 Load height data
+```{r}
+df_height <- read_delim("../data/fatherson.csv.bz2")
+
+father <- data.frame(fheight = df_height$fheight)
+dim(father)
+sum(is.na(father))
+range(father)
+```
+There are 1078 observations of father's height and no missing values. There are no unreasonable values.
+
+#### 2.1.3 Compute mean, median, standard deviation and range
+```{r}
+fh_mean <- mean(father$fheight)
+print(fh_mean)
+fh_median <- median(father$fheight)
+print(fh_median)
+sd(father$fheight)
+range(father$fheight)
+rel_diff <- (fh_mean - fh_median)/fh_median * 100
+print(rel_diff)
+```
+The mean is 171.92, median is 172.1, the standard deviation is 6.97, the range is 149.9 191.6.
+The mean is slightly smaller than median by 0.1016%, which means that there are some outliers for shorter father so that it makes the distribution is slightly skewed to the left.
+The standard deviation shows that there's a 7cm spread out of height around mean value 171.92.
+We could also infer based on Empirical rule that 95% of the height are in range of 158 to 186cm
+
+#### 2.1.4 Plot Histogram
+```{r}
+ggplot(father, aes(x = fheight)) +
+  geom_histogram(binwidth = 3, fill = "pink", color = "cyan") +
+  geom_vline(aes(xintercept = fh_mean), color = "red", linetype = "solid", size = 1) +
+  geom_vline(aes(xintercept = fh_median), color = "purple3", linetype = "dashed", size = 1) +
+  labs(title = "Histogram of Father's Height",
+       x = "Height (cm)",
+       y = "Frequency") 
+```
+The red solid line represents mean and the purple dashed line represents median
+
+#### 2.1.5 Comment on the graph
+The graph is pretty much a normal distribution and roughly symmetric with outlier of shorter people. So that the distribution is slightly left-skewed
+
+### 2.2 Financial transactions
+#### 2.2.1 What kind of measure is financial transactions?
+Financial transactions should be in Ratio measure type since it has a well-defined true zero. We can also say a transaction is twice as large as another. It should also be continuous since it can be all value in a specific range.
+
+#### 2.2.2 Load dataset and basic check
+```{r}
+fin_transac <- read_delim("../data/account-transactions.csv.bz2")
+dim(fin_transac)
+colSums(is.na(fin_transac))
+sample_n(fin_transac, 10)
+```
+There are 1657 observations. All variables are in correct data type and there's no missing values or unreasonable values.
+
+#### 2.2.3 Compute statistic information
+```{r}
+fin_mean <- mean(fin_transac$amount)
+print(fin_mean)
+fin_median <- median(fin_transac$amount)
+print(fin_median)
+sd(fin_transac$amount)
+range(fin_transac$amount)
+fin_rel_diff <- (fin_mean - fin_median)/fin_median * 100
+print(fin_rel_diff)
+```
+The mean is 89.91346, the median is 11.9, the standard deviation is 368.2273 and the range is between 0.01 and 4215.00.
+The mean is 656% times larger than the median, which means that the distribution is heavily right-skewed with a few large transactions.
+The standard deviation is significantly larger than mean which means that there's a high variation of the transaction amounts.
+The range kind of proof the assumption above since the maximum amount of transaction is 4215.00.
+
+#### 2.2.4 & 2.2.5 Plot histogram and convert to log scale
+```{r}
+ggplot(fin_transac, aes(x = amount)) +
+  geom_histogram(bins =30, color = "cyan", fill = "pink") +
+  labs(title = "Transaction Amounts Graph",
+       x = "Amount ($)",
+       y = "Count") + 
+  geom_vline(aes(xintercept = fin_mean), color = "Red", linetype = "solid", size = 1) +
+  geom_vline(aes(xintercept = fin_median), color = "purple3", linetype = "dashed", size = 1) +
+  scale_y_log10()
+```
+The red solid line represents the mean and the purple dashed line represent the median.
+This is a right skewed distribution.
+
+### 2.3 Human Influence
+#### 2.3.1 What kind of measure is this?
+This should be in a ratio measure type since it has well-defined true zero. We could say that one research paper has twice as much of citations than another. Also it should be a positive discrete variable since it can only have whole numbers such as 0, 1, 2 and no 0.5. Citation can't be negative.
+
+#### 2.3.2 Load data and basic checks
+```{r}
+human_inf <- read_delim("../data/mag-30k-citations.csv.bz2")
+dim(human_inf)
+sum(is.na(human_inf$citations))
+cat(sum(human_inf$citations < 0))
+```
+There are 30000 observations from the dataset, there's no missing values for citations and all citations are positive.
+
+#### 2.3.3 Conduct statistical summary
+```{r}
+ci_mean <- mean(human_inf$citations)
+print(ci_mean)
+ci_median <- median(human_inf$citations)
+print(ci_median)
+ci_mode <- modeest::mlv(human_inf$citations, method="mfv")
+print(ci_mode)
+sd(human_inf$citations)
+range(human_inf$citations)
+ci_rel_diff <- (ci_mean - ci_median)/ci_median * 100
+print(ci_rel_diff)
+```
+The mean is 15.60563, the median is 2, the mode is 0, the standard deviation is 79.1781, the range is 0 to 7241.
+The mean is 680% larger than median which means that the distribution is right skewed with outlier of highly cited papers.
+The mean is also much larger than mode since mode is 0. It again indication a skewed distribution.
+The standard deviation is much larger than mean which indicates a large variability in numbers of citations.
+The range kind of proof the summary by indicating maximum numbers of citations are 7241
+
+#### 2.3.4 Plot a histogram
+```{r}
+ggplot(human_inf, aes(citations)) + 
+  geom_histogram(bins = 99, color = "cyan", fill = "pink") +
+  labs(title = "Citations amount graph",
+       x = "Amount of Citations",
+       y = "Frequency")
+```
+The graph is heavily skewed to the left with most values less than 10 but some larger outliers.
+It resemble a right skewed distribution.
+
+#### 2.3.5 Try log-scale, and log-log scale.
+```{r}
+ggplot(human_inf, aes(citations)) + 
+  geom_histogram(bins = 50, color = "cyan", fill = "pink") +
+  labs(title = "Citations amount graph (log scale on x axis)",
+       x = "Amount of Citations",
+       y = "Frequency") +
+  scale_x_log10()
+```
+
+```{r}
+ggplot(human_inf, aes(log10(citations))) + 
+  geom_histogram(bins = 50, color = "cyan", fill = "pink") +
+  labs(title = "Citations amount graph (log scale on both axis)",
+       x = "Amount of Citations",
+       y = "Frequency") +
+  scale_x_log10()
+```
+Yes, I can get it to a nice and easy to grasp image. If I use log scale on x axis the graph looks good.
+
+#### 2.3.6 Comment on three graphs
+Human Heights follow a normal distribution with a bell shape. It is symmetric with people's heights close to mean. Human height are influenced by many independent factors such as genetic and environmental factors which makes it a normal distribution.
+
+Financial Transactions follow a right skewed distribution. Mean is higher than median since there are some large transactions. This is probably due to people's spending behavior and the price distribution of everything. People tend to buy more cheap stuff in their lives. Also, people might not buy much expensive things using cards.
+
+Research Citations are heavily right skewed compare to financial transactions. With most papers with few citations and a long tail but small amount of high cited papers. Reasons of this behavior might because of the quality of the article itself. Only a small number of articles are of high quality. Another reason may be that people tend to cite articles with high amount of citations.
+
+#### How many hours?
+Around 10

@@ -1,0 +1,108 @@
+---
+title: "Lab 02 - Describe Data"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+```
+
+## 1 Load Data
+### 1.1 Load DatasSet
+```{r}
+df <- read_delim("../../data/king-house-prices.csv.bz2")
+```
+
+### 1.1.2a Check rows and columns
+```{r}
+dim(df)
+```
+There are 21613 rows and 21 columns
+
+### 1.1.2b Print few lines of data
+```{r}
+sample_n(df, 10)
+```
+I've print 10 random rows as example. All these data looks good with correct data type and the values looks reasonable.
+
+```{r}
+colSums(is.na(df))
+```
+There's no null values in this dataset.
+
+## 2. Listing price
+### 2.1 Find max and min of listing price
+```{r}
+range(df$price)
+```
+The price of home range from 75,000 to 7,700,000. The price of housing was reasonable.
+
+### 2.2 Compute mean and median
+```{r}
+df %>% 
+  summarise(mean = mean(price), median = median(price))
+```
+The mean listing price was $540088.1 and the median listing price was $450000. The mean value is $9000 higher than median value which means that the distribution is skew to the right with outlier of much expensive houses.
+
+### 2.3 compute standard deviation
+```{r}
+price <- df$price
+sqrt(mean((price-mean(price))^2))
+```
+The standard deviation of price was $367118.7
+
+### 2.4 compare sd calculation method
+```{r}
+sd(price)
+```
+the previous result is around $9 less than sd method. Since sd method uses 1/(N-1) instead of 1/N
+
+### 2.5 plot price in linear scale and log scale
+```{r}
+l <- ggplot(df, aes(price)) +
+  geom_histogram(bins = 33, fill = "pink", color="cyan") 
+s <- ggplot(df, aes(price)) +
+  geom_histogram(bins = 33, fill = "pink", color="cyan") +
+  scale_x_log10()
+grid.arrange(l, s, ncol = 2)
+```
+
+### 2.6 Comment on histograms
+For the linear scale graph on the left, the distribution is heavily right skewed with a really high tail at $8e+06. If we look at the log scale graph on the right, it shows us a normal distribution.
+
+## 3. Sample proportions
+### 3.1 Check percentage of cheap and expensive price
+```{r}
+df %>% 
+  summarize(cheap = mean(df$price < 200000), expensive = mean(df$price > 1000000))
+```
+3.6% of the listing price are cheaper than $200,000 and 6.78% of the listing price are more expensive than $1M
+
+### 3.2 Price less than 1M and overlook waterfront
+```{r}
+df %>% 
+  summarise(mean(price < 1000000 & waterfront))
+```
+There are 0.268% of listing price that are less than $1M and overlooking waterfront
+
+## 4 Condition and price
+### 4.1 Median, mean, and sd of price in each of condition
+```{r}
+df %>% 
+  group_by(condition) %>% 
+  summarise(median = median(price), mean = mean(price), sd = sd(price))
+```
+### 4.2 Make boxplot of relationship
+```{r}
+ggplot(df, aes(as_factor(condition), price)) +
+  geom_boxplot() + 
+  scale_y_log10()
+```
+
+### 4.3 Comment on lab
+For aparment with 1 and 2 index of condition, there wasn't much outlier. The graph demonstrate that the price tends to be higher for better condition apartment. 
+

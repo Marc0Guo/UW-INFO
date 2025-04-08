@@ -1,0 +1,69 @@
+---
+title: "lab08"
+author: "Marco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+# 1
+## 1.1
+```{r}
+cp <- read_delim("../../data/compas-binary.csv.bz2")
+sum(is.na(cp))
+head(cp)
+```
+
+## 1.2
+```{r}
+table(Risk_score = cp$risk, Re_rate = cp$recidivist)
+```
+```{r}
+1130/(1130+2146)
+1353/(649+1353)
+```
+
+The risk predict correctly 0.3449328 of recidivism and predict 0.6758242 of no recidivism.
+
+## 1.3
+```{r}
+table(Race = cp$race, Re_rate = cp$recidivist)
+```
+```{r}
+1661/(1661+1514)
+822/(822+1281)
+```
+
+The recidivism for African-American is 0.5231496 and for Caucasian is 0.3908702
+
+## 2.1
+```{r}
+cm <- table(Pred = cp$risk, Actual = cp$recidivist)
+cm/sum(cm)
+```
+From judges perspective, they don't want false negative
+From defendant's perspective, they don't want false positive.
+Juedges incorrectly identify 12.29 percentage of the recidivist as non recidivist
+Defendant's are incorrectly identify as recidivist by 21.4 percent of the cases.
+
+## 2.3
+The rate was generally not acceptable since Judges incorrectly identify too many recidivist as non recidivist. 
+
+## 3.1
+```{r}
+cp_A <- cp %>% 
+  filter(race == "African-American")
+cm_A <- table(Pred = cp_A$risk, Actual = cp_A$recidivist)
+cm_A/sum(cm_A)
+```
+```{r}
+cp_C <- cp %>% 
+  filter(race == "Caucasian")
+cm_C <- table(Pred = cp_C$risk, Actual = cp_C$recidivist)
+cm_C/sum(cm_C)
+```
+There's a 3.9% difference in false negative and 6.8% difference in false positive. \\
+Therefore in juedges perspective they tend to predict Caucasian Recidivist more likely to be no risk. From offenders perspective, Non re offended African American are more likely to be classified as reoffended. Therefore, Caucasian is favored in the model.

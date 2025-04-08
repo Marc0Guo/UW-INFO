@@ -1,0 +1,76 @@
+---
+title: "lab09"
+output: html_document
+date: "`r Sys.Date()`"
+---
+```{r}
+library(tidyverse)
+```
+
+1.1
+```{r}
+dd <- read_delim("../Data/dawgs-dash-5k-2023.csv.bz2")
+dd %>% 
+  head(5)
+```
+
+1.2
+```{r}
+class(dd$category)
+class(dd$time)
+cat("the data set of 'category' column is character and the data type of 'time' is build-in
+    data type time that representing hours, minutes and seconds")
+```
+
+1.3
+```{r}
+dd <- read_delim("../Data/dawgs-dash-5k-2023.csv.bz2",
+                 col_types = list(time = "character"))
+dd <- dd%>% 
+  mutate(time = ifelse(str_count(time, ":") == 1,
+                        paste0("00:", time),
+                        time)) %>% 
+  mutate(time = parse_time(time))
+head(dd, 5)
+```
+
+1.4
+```{r}
+head(dd, 3)
+tail(dd, 3)
+```
+
+1.5
+```{r}
+dd %>%
+   ggplot(aes(time)) +
+   geom_histogram()
+```
+
+2.1
+```{r}
+uah <- read_delim("../Data/UAH-lower-troposphere-wide.csv.bz2")
+
+uah <- uah %>% 
+  select("year", "month", "globe", "nopol", "sopol")
+head(uah, 5)
+```
+
+2.2
+```{r}
+uah <- uah %>% 
+    pivot_longer(!c(year, month),
+           	names_to = "region",
+           	values_to = "temperature")
+head(uah, 5)
+```
+
+2.3
+```{r}
+uah <- uah %>% 
+  pivot_wider(id_cols = c(year, month),
+              names_from = region,
+              values_from = temperature)
+head(uah, 5)
+```
+

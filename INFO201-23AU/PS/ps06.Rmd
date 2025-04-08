@@ -1,0 +1,225 @@
+---
+title: "ps06"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+1.1.1
+```{r}
+CO2 <- read_delim("../Data/scripps-co2.csv.bz2")
+
+CO2 <- CO2 %>% 
+  select("year",
+         "month",
+         "co2")
+
+head(CO2, 5)
+```
+
+1.1.2
+```{r}
+cat("Each line in this data set represents a month of a year with corresponding 
+    Mauna Loa ovservatory CO2 concentratuion value in ppm.")
+```
+
+1.1.3
+```{r}
+summary(CO2)
+cat("The missing values are coded -99.99 in the dataset because a negative number
+    is not reasonable for CO2 concentration")
+```
+
+1.1.4
+```{r}
+head(CO2, 1)
+tail(CO2, 1)
+cat("The dataset represent the time period from Janurary 1958 to December in 2023")
+```
+
+1.1.5
+```{r}
+CO2 <- CO2%>% 
+  filter(co2 != -99.99)
+  
+CO2 %>% 
+  mutate(year_month = as.Date(paste(year, month, "1", sep = "-"))) %>%
+  ggplot(aes(year_month, co2)) +
+  geom_line() +
+  geom_point(size = 0.1) +
+  labs(title = "Mauna Loa Ovservatory, Hawaii*
+       Monthly Average Carbon Dioxide Concentration",
+       x = "Year",
+       y = "CO2 Concentration (ppm)")
+
+```
+
+1.1.6
+```{r}
+cat("The graph shown that the CO2 level steadily increase over the last 60 years")
+```
+
+1.2.1
+```{r}
+hc <- read_delim("../Data/hadcrut-5.0.1.0-annual.csv.bz2")
+head(hc)
+
+hc <- hc %>% 
+  select(year = `Time`,
+          tempDiff = `Anomaly (deg C)`)
+
+head(hc)
+```
+
+1.2.2
+```{r}
+cat("each line in the data represents the temperature difference of a certain year compares to 1961-1990 average")
+```
+
+1.2.3
+```{r}
+head(hc, 1)
+tail(hc, 1)
+cat("the dataset represents time period from 1850 to 2023")
+```
+
+1.2.4
+```{r}
+pre_industrial_avg <- hc %>% 
+  filter(year <= 1900) %>% 
+  summarize(pre_industrial_avg = mean(tempDiff)) %>% 
+  pull(pre_industrial_avg)
+
+
+hc <- hc %>% 
+  mutate(pre_industrial = tempDiff - pre_industrial_avg)
+
+head(hc)
+```
+
+1.2.5
+```{r}
+hc %>% 
+  ggplot(aes(year, pre_industrial))+
+  geom_line()+
+  labs(title = "Global Sueface Temperature Change Over Time",
+       x = "Year",
+       y = "Temperature anomaly 
+       (w.r.t. 1850-1900 average), °C")
+```
+
+1.2.6
+```{r}
+cat("The temperature was floating up and down without lots of changes from 1850 to 1920, trending up since 1920 and keep trending up")
+```
+
+1.2.7
+```{r}
+cat("yes")
+```
+
+1.3.1
+```{r}
+cat("the variables I can use to merge CO2 data with global temperature data is Anomaly and CO2 level, the merge key would be year")
+```
+
+1.3.2
+```{r}
+cat("I could take the yearly average CO2 by summarize the mean CO2 of each month in a year")
+```
+
+1.3.3
+```{r}
+CO2 <- CO2 %>% 
+  group_by(year) %>% 
+  summarise(avg = mean(co2, na.rm = TRUE))
+
+merge_data <- inner_join(hc, CO2, by = "year")
+
+cat("I would be using left inner join because HadCurt has more time period covered than co2 dataset. I would like to keep rows where a certain year is available for both datasets")
+
+head(merge_data, 5)
+```
+
+1.3.4
+```{r}
+merge_data <- merge_data %>%
+  mutate(decade = floor(year / 10) * 10)
+
+merge_data %>% 
+  ggplot(aes(avg, pre_industrial, color = as.factor(decade))) + 
+    geom_point() +
+    geom_smooth(method = "lm", color = "gray", se = FALSE) +
+    geom_hline(yintercept = 1.5, color = "pink") +
+    labs(title = "CO2 conventration vs. Temperature Anomaly",
+         x = "CO2 concentration (ppm)",
+         y = "Temperature anomaly 
+         (w.r.t. 1850-1900 average), °C",
+         color = "Decade")
+```
+
+2.1
+```{r}
+uah <- read_delim("../Data/UAH-lower-troposphere-wide.csv.bz2")
+
+uah <- uah %>% 
+  select(year, month, globe)
+head(uah)
+```
+
+2.2
+```{r}
+uah <- uah %>% 
+  group_by(year) %>% 
+  summarize(uah_avg = mean(globe, na.rm = TRUE))
+
+head(uah)
+```
+
+2.2.3
+```{r}
+merged_data <- inner_join(uah, hc, by = "year")
+merged_data <- merged_data %>% 
+  select(!tempDiff)
+head(merged_data)
+```
+
+2.2.4
+```{r}
+cat("the dataset is in wide form")
+```
+
+2.2.5
+```{r}
+merged_data_long <- 
+  merged_data %>% 
+  select(year, 
+         surface = `pre_industrial`,
+         "lower troposphere" = `uah_avg`) %>% 
+  pivot_longer(cols = -year,
+               names_to = "type",
+               values_to = "anomaly") %>% 
+  mutate(anomaly = round(anomaly, 3))
+
+head(merged_data_long)
+```
+
+2.6
+```{r}
+merged_data_long %>% 
+  ggplot(aes(x = year,
+         y = anomaly,
+         color = type)) +
+  geom_line() +
+  geom_smooth(aes(group = type), method = "lm", se = FALSE) +
+  labs(title = "Temperature Anomaly Changes Over Years",
+       x = "Year",
+       y = "Temperature Anomaly (°C)",
+       color = "Type")
+cat("surface is growing faster")
+```
+

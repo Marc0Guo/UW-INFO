@@ -1,0 +1,27 @@
+{
+    "id": "2FC9C831",
+    "path": "~/Downloads/INFO 201/P0/ps01-basic-r-starter-1.R",
+    "project_path": null,
+    "type": "r_source",
+    "hash": "692586768",
+    "contents": "",
+    "dirty": false,
+    "created": 1696985719580.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "93,21",
+        "scrollLine": "0",
+        "notebook_format": "html_document"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1696899823,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1696899823,
+    "read_only": false,
+    "read_only_alternatives": []
+}
